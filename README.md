@@ -22,4 +22,5 @@ Predicate invention and functional testing do not work for now.
 
 ## References
 - Andrew Cropper and Rolf Morel. [Learning programs by learning from failures](https://arxiv.org/abs/2005.02259).
-- Luc De Raedt, Anton Dries, Ingo Thon, Guy Van den Broeck, Mathias Verbeke. [Inducing probabilistic relational rules from probabilistic examples](https://lirias.kuleuven.be/handle/123456789/499989).
+- Luc De Raedt, Ingo Thon. [Probabilistic rule learning](https://limo.libis.be/primo-explore/fulldisplay?docid=LIRIAS2338804&context=L&vid=Lirias&search_scope=Lirias&tab=default_tab&lang=en_US)
+- Luc De Raedt, Anton Dries, Ingo Thon, Guy Van den Broeck, Mathias Verbeke. [Inducing probabilistic relational rules from probabilistic examples](https://limo.libis.be/primo-explore/fulldisplay?docid=LIRIAS1569330&context=L&vid=Lirias&search_scope=Lirias&tab=default_tab&lang=en_US).
