@@ -47,16 +47,16 @@ def ground_rules(stats, grounder, max_clauses, max_vars, clauses):
 
     return out
 
-def decide_outcome(conf_matrix):
+def decide_outcome(conf_matrix, eps):
     tp, fn, tn, fp = conf_matrix
-    if fn == 0:
+    if fn < eps:
         positive_outcome = Outcome.ALL # complete
-    elif tp == 0 and fn > 0:
+    elif tp < eps and fn > eps:
         positive_outcome = Outcome.NONE # totally incomplete
     else:
         positive_outcome = Outcome.SOME # incomplete
 
-    if fp == 0:
+    if fp < eps:
         negative_outcome = Outcome.NONE  # consistent
     # elif FP == self.num_neg:     # AC: this line may not work with minimal testing
         # negative_outcome = Outcome.ALL # totally inconsistent
@@ -120,7 +120,6 @@ def calc_score(conf_matrix):
 def popper(settings, stats):
     solver = ClingoSolver(settings)
     tester = Tester(settings)
-    settings.num_pos, settings.num_neg = len(tester.pos), len(tester.neg)
     grounder = ClingoGrounder()
     constrainer = Constrain()
     best_score = None
@@ -140,7 +139,7 @@ def popper(settings, stats):
             # TEST HYPOTHESIS
             with stats.duration('test'):
                 conf_matrix = tester.test(program)
-                outcome = decide_outcome(conf_matrix)
+                outcome = decide_outcome(conf_matrix, settings.eps)
                 score = calc_score(conf_matrix)
 
             stats.register_program(program, conf_matrix)

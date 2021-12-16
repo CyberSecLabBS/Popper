@@ -1,4 +1,8 @@
-from pyswip import Prolog
+from problog.engine import DefaultEngine
+from problog.program import PrologString
+from problog.logic import Term
+from problog import get_evaluatable
+from problog.util import init_logger
 
 import re
 import os
@@ -12,47 +16,35 @@ from datetime import datetime
 class Tester():
     def __init__(self, settings):
         self.settings = settings
-        self.prolog = Prolog()
+        self.engine = DefaultEngine()
+        self.data = ":- use_module(library(assert)).\n"
+        self.loaded = False
+        self.examples = []
         self.eval_timeout = settings.eval_timeout
-        self.load_basic()
         self.already_checked_redundant_literals = set()
-        self.seen_tests = {}
-        self.seen_prog = {}
+        init_logger(verbose=0)
 
-    def first_result(self, q):
-        return list(self.prolog.query(q))[0]
-
-    def load_basic(self):
+    def load_basic(self, head):
         bk_pl_path = self.settings.bk_file
         exs_pl_path = self.settings.ex_file
         test_pl_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test.pl')
+        
+        for x in [bk_pl_path, exs_pl_path, test_pl_path]:
+          with open(x, 'r') as y:
+            self.data += y.read()
+            self.data += '\n'
+        
+        args = ','.join(['_'] * head.arity)
+        q1 = f"query({head.predicate}({args}))."
+        db = self.engine.prepare(PrologString(self.data + q1))
 
-        for x in [exs_pl_path, bk_pl_path, test_pl_path]:
-            if os.name == 'nt': # if on Windows, SWI requires escaped directory separators
-                x = x.replace('\\', '\\\\')
-            self.prolog.consult(x)
+        lf = self.engine.ground_all(db)
+        result = get_evaluatable().create_from(lf).evaluate()
 
-        # examples must be loaded first
-        list(self.prolog.query('load_examples'))
+        for i in result.items():
+          self.examples.append(i)
 
-        self.pos = [x['I'] for x in self.prolog.query('current_predicate(pos_index/2),pos_index(I,_)')]
-        self.neg = [x['I'] for x in self.prolog.query('current_predicate(neg_index/2),neg_index(I,_)')]
-
-        self.prolog.assertz(f'timeout({self.eval_timeout})')
-
-    @contextmanager
-    def using(self, rules):
-        current_clauses = set()
-        try:
-            for rule in rules:
-                (head, body) = rule
-                self.prolog.assertz(Clause.to_code(Clause.to_ordered(rule)))
-                current_clauses.add((head.predicate, head.arity))
-            yield
-        finally:
-            for predicate, arity in current_clauses:
-                args = ','.join(['_'] * arity)
-                self.prolog.retractall(f'{predicate}({args})')
+        self.loaded = True
 
     def check_redundant_literal(self, program):
         for clause in program:
@@ -62,7 +54,9 @@ class Tester():
             self.already_checked_redundant_literals.add(k)
             (head, body) = clause
             C = f"[{','.join(('not_'+ Literal.to_code(head),) + tuple(Literal.to_code(lit) for lit in body))}]"
-            res = list(self.prolog.query(f'redundant_literal({C})'))
+            query = Term(f'redundant_literal({C})')
+            db = self.engine.prepare(PrologString(self.data))
+            res = self.engine.query(db, query)
             if res:
                 yield clause
 
@@ -73,47 +67,74 @@ class Tester():
             C = f"[{','.join(('not_'+ Literal.to_code(head),) + tuple(Literal.to_code(lit) for lit in body))}]"
             prog.append(C)
         prog = f"[{','.join(prog)}]"
-        return list(self.prolog.query(f'redundant_clause({prog})'))
+        query = Term(f'redundant_clause({prog})')
+        db = self.engine.prepare(PrologString(self.data))
+        return self.engine.query(db, query)
 
     def is_non_functional(self, program):
         with self.using(program):
             return list(self.prolog.query(f'non_functional.'))
 
-    def success_set(self, rules):
-        prog_hash = frozenset(rule for rule in rules)
-        if prog_hash not in self.seen_prog:
-            with self.using(rules):
-                self.seen_prog[prog_hash] = set(next(self.prolog.query('success_set(Xs)'))['Xs'])
-        return self.seen_prog[prog_hash]
-
     def test(self, rules):
-        if all(Clause.is_separable(rule) for rule in rules):
-            covered = set()
-            for rule in rules:
-                covered.update(self.success_set([rule]))
-        else:
-            covered = self.success_set(rules)
+      (head, body) = rules[0]
 
-        tp, fn, tn, fp = 0, 0, 0, 0
-        for p in self.pos:
-            if p in covered:
-                tp +=1
-            else:
-                fn +=1
-        for n in self.neg:
-            if n in covered:
-                fp +=1
-            else:
-                tn +=1
+      if not self.loaded:
+        self.load_basic(head)
 
-        return tp, fn, tn, fp
+      args = ','.join(['_'] * head.arity)
+      h = f":- retractall({head.predicate}({args})).\n"
+
+      for rule in rules:
+        code = Clause.to_code(Clause.to_ordered(rule))
+        h += f":- assertz(({code})).\n"
+
+      new_data = self.data + h
+      db = self.engine.prepare(PrologString(new_data))
+
+      tp = 0
+      tn = 0
+      fp = 0
+      fn = 0
+
+      queries = []
+
+      for e in self.examples:
+        q = e[0]
+        queries.append(q)
+
+      lf2 = self.engine.ground_all(db, queries=queries)
+      res = get_evaluatable().create_from(lf2).evaluate()
+
+      for i in range(0, len(self.examples)):
+        pi = self.examples[i][1]
+        ni = 1 - pi
+        phi = res.get(queries[i])
+        nhi = 1 - phi
+
+        tpi = min(pi, phi)
+        tni = min(ni, nhi)
+        fpi = max(0, ni - tni)
+        fni = max(0, pi - tpi)
+
+        tp += tpi
+        tn += tni
+        fp += fpi
+        fn += fni
+
+      return tp, fn, tn, fp
 
     def is_totally_incomplete(self, rule):
-        if not Clause.is_separable(rule):
-            return False
-        return not any(x in self.success_set([rule]) for x in self.pos)
+      if not Clause.is_separable(rule):
+        return False
+
+      tp, fn, tn, fp = self.test([rule])
+
+      return tp < self.settings.eps
 
     def is_inconsistent(self, rule):
-        if not Clause.is_separable(rule):
-            return False
-        return any(x in self.success_set([rule]) for x in self.neg)
+      if not Clause.is_separable(rule):
+        return False
+
+      rp, fn, tn, fp = self.test([rule])
+
+      return fn > self.settings.eps

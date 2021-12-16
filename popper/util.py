@@ -12,6 +12,7 @@ TIMEOUT=600
 EVAL_TIMEOUT=0.001
 MAX_LITERALS=100
 MAX_SOLUTIONS=1
+EPSILON=0.1
 CLINGO_ARGS=''
 
 def parse_args():
@@ -31,6 +32,7 @@ def parse_args():
     parser.add_argument('--ex-file', type=str, default='', help='Filename for the examples')
     parser.add_argument('--bk-file', type=str, default='', help='Filename for the background knowledge')
     parser.add_argument('--bias-file', type=str, default='', help='Filename for the bias')
+    parser.add_argument('--eps', type=float, default=EPSILON, help='Threshold used to determine false negatives etc.')
     return parser.parse_args()
 
 def timeout(func, args=(), kwargs={}, timeout_duration=1, default=None):
@@ -84,7 +86,8 @@ def parse_settings():
         clingo_args= [] if not args.clingo_args else args.clingo_args.split(' '),
         max_solutions = MAX_SOLUTIONS,
         functional_test = args.functional_test,
-        hspace = False if args.hspace == -1 else args.hspace
+        hspace = False if args.hspace == -1 else args.hspace,
+        eps = args.eps
     )
 
 class Settings:
@@ -102,7 +105,8 @@ class Settings:
             clingo_args = CLINGO_ARGS,
             max_solutions = MAX_SOLUTIONS,
             functional_test = False,
-            hspace=False):
+            hspace=False,
+            eps=EPSILON):
             
         self.bias_string = bias_string
         self.ex_file = ex_file
@@ -118,6 +122,7 @@ class Settings:
         self.max_solutions = max_solutions
         self.functional_test = functional_test
         self.hspace = hspace
+        self.eps = eps
 
 def format_program(program):
     return "\n".join(Clause.to_code(Clause.to_ordered(clause)) + '.' for clause in program)
