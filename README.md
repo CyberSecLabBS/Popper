@@ -15,7 +15,7 @@ This is a probabilistic versoin of [Popper](https://github.com/logic-and-learnin
 See the original [README.md](https://github.com/logic-and-learning-lab/Popper/blob/main/README.md). Since the format of the example file has changed, refer to the new examples.
 
 #### Negation
-You can now include mutually exclusive predicates in your bk, by adding an *exclude* predicate in the bias file. See the *surf* example.
+You can now include mutually exclusive predicates in your bk, by adding an *exclusive* predicate in the bias file. See the *surf* example.
 
 
 ## Status
