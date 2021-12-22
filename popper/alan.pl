@@ -102,6 +102,12 @@ body_size(C,N):-
     Var2 = 0..Var1-1,
     not clause_var(C,Var2).
 
+%% MUTUALLY EXCLUSIVE PREDICATES
+:-
+    exclusive(P1,P2),
+    body_literal(C,P1,_,_),
+    body_literal(C,P2,_,_).
+
 %% ##################################################
 %% VARS ABOUT VARS - META4LIFE
 %% ##################################################
