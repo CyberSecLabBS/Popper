@@ -65,6 +65,13 @@ def decide_outcome(conf_matrix, eps):
 
     return (positive_outcome, negative_outcome)
 
+
+def pi_enabled(settings):
+  if "enable_pi" in settings.bias_string:
+    return True
+  else:
+    return False
+
 def build_rules(settings, stats, constrainer, tester, program, before, min_clause, outcome):
     (positive_outcome, negative_outcome) = outcome
     # RM: If you don't use these two lines you need another three entries in the OUTCOME_TO_CONSTRAINTS table (one for every positive outcome combined with negative outcome ALL).
@@ -93,13 +100,13 @@ def build_rules(settings, stats, constrainer, tester, program, before, min_claus
     if tester.check_redundant_clause(program):
         rules.update(constrainer.generalisation_constraint(program, before, min_clause))
 
-    if len(program) > 1:
+    if len(program) > 1 and not pi_enabled(settings):
         # evaluate inconsistent sub-clauses
         #for rule in program:
         #    if Clause.is_separable(rule) and tester.is_inconsistent(rule):
         #        for x in constrainer.generalisation_constraint([rule], before, min_clause):
         #            rules.add(x)
-
+    
         # eliminate totally incomplete rules
         if all(Clause.is_separable(rule) for rule in program):
             for rule in program:
