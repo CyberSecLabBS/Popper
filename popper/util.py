@@ -135,7 +135,7 @@ def format_conf_matrix(conf_matrix):
     recall = 'n/a'
     if (tp+fn) > 0:
         recall = f'{tp / (tp+fn):0.2f}'
-    return f'% Precision:{precision}, Recall:{recall}, TP:{tp}, FN:{fn}, TN:{tn}, FP:{fp}\n'
+    return f'% Precision:{precision}, Recall:{recall}, TP:{tp:0.2f}, FN:{fn:0.2f}, TN:{tn:0.2f}, FP:{fp:0.2f}\n'
 
 class Stats:
     def __init__(self,

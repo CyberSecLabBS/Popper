@@ -105,8 +105,8 @@ body_size(C,N):-
 %% MUTUALLY EXCLUSIVE PREDICATES
 :-
     exclusive(P1,P2),
-    body_literal(C,P1,_,_),
-    body_literal(C,P2,_,_).
+    body_literal(C,P1,A,Vars),
+    body_literal(C,P2,A,Vars).
 
 %% ##################################################
 %% VARS ABOUT VARS - META4LIFE
