@@ -51,7 +51,7 @@ def decide_outcome(conf_matrix, eps):
     tp, fn, tn, fp = conf_matrix
     if fn < eps:
         positive_outcome = Outcome.ALL # complete
-    elif tp < eps and fn > eps:
+    elif tp < eps and fn > 1 - eps:
         positive_outcome = Outcome.NONE # totally incomplete
     else:
         positive_outcome = Outcome.SOME # incomplete
@@ -100,12 +100,13 @@ def build_rules(settings, stats, constrainer, tester, program, before, min_claus
     if tester.check_redundant_clause(program):
         rules.update(constrainer.generalisation_constraint(program, before, min_clause))
 
+    # pi interferes with checking clauses singularly in this implementation
     if len(program) > 1 and not pi_enabled(settings):
         # evaluate inconsistent sub-clauses
-        #for rule in program:
-        #    if Clause.is_separable(rule) and tester.is_inconsistent(rule):
-        #        for x in constrainer.generalisation_constraint([rule], before, min_clause):
-        #            rules.add(x)
+        for rule in program:
+            if Clause.is_separable(rule) and tester.is_inconsistent(rule):
+                for x in constrainer.generalisation_constraint([rule], before, min_clause):
+                    rules.add(x)
     
         # eliminate totally incomplete rules
         if all(Clause.is_separable(rule) for rule in program):

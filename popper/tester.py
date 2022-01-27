@@ -131,10 +131,10 @@ class Tester():
 
       return tp < self.settings.eps
 
-    #def is_inconsistent(self, rule):
-    #  if not Clause.is_separable(rule):
-    #    return False
-    #
-    #  tp, fn, tn, fp = self.test([rule])
-    #
-    #  return fn > self.settings.eps
+    def is_inconsistent(self, rule):
+      if not Clause.is_separable(rule):
+        return False
+    
+      tp, fn, tn, fp = self.test([rule])
+    
+      return fp > 1 - self.settings.eps
